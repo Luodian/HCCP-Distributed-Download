@@ -8,7 +8,7 @@ import org.apache.ignite.compute.ComputeTaskFuture;
 class Main {
 	public static void main (String[] args) {
 		
-		try (Ignite ignite = Ignition.start ("examples/config/example-cache.xml")) {
+		try (Ignite ignite = Ignition.start ("gridgain/examples/config/example-cache.xml")) {
 			// Limit broadcast to remote nodes only and
 			// enable asynchronous mode.
 			IgniteCompute compute = ignite.compute (ignite.cluster ().forRemotes ()).withAsync ();
