@@ -1,6 +1,5 @@
 package com.company;
 
-import com.Utility.IgniteUtl.IgniteUtility;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteTransactions;
@@ -16,7 +15,7 @@ import java.io.InputStream;
 class Main {
 	public static void main (String[] args) {
 		try {
-            IgniteUtility.startDefaultIgnite();
+//            IgniteUtility.startDefaultIgnite();
 			CacheConfiguration cacheCfg = new CacheConfiguration ("myCache");
 			cacheCfg.setCacheMode (CacheMode.PARTITIONED);
 
