@@ -39,7 +39,7 @@ public class SiteFileFetch extends Thread {
                 Utility.log("File is not access!");
             } else {
                 for (int i = 0; i < startPos.length; i++) {
-                    startPos[i] = (i * (fileLength / startPos.length));
+                    startPos[i] = (i * (fileLength / startPos.length)) + startPosition;
                 }
                 for (int i = 0; i < endPos.length - 1; i++) {
                     endPos[i] = startPos[i + 1];

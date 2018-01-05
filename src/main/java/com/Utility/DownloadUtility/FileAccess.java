@@ -20,4 +20,14 @@ public class FileAccess implements Serializable {
         }
         return writeLength;
     }
+
+    public synchronized boolean read(byte[] buffer, int offset, int length) {
+        try {
+            targetFile.read(buffer, offset, length);
+            return true;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
 }
