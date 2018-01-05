@@ -14,7 +14,7 @@ public class SiteFileFetch extends Thread {
     private long endPosition; //文件结束位置(不包含)
 
 
-    SiteFileFetch(String url, String path, String name, long startP, long endP, int split) {
+    public SiteFileFetch(String url, String path, String name, long startP, long endP, int split) {
         siteURL = url;
         filePath = path;
         fileName = name;
