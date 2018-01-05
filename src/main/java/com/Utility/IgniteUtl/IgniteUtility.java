@@ -27,7 +27,4 @@ public class IgniteUtility {
 			e.printStackTrace ();
 		}
 	}
-
-//	public static void
-	
 }
