@@ -1,4 +1,4 @@
-package com.Utility;
+package com.Utility.DownloadUtility;
 import java.io.*;
 
 public class SiteFileFetch extends Thread {

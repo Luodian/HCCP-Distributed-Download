@@ -1,4 +1,4 @@
-package com.Utility;
+package com.Utility.DownloadUtility;
 public class Utility {
     public static void log(String message) {
         System.out.println(message);

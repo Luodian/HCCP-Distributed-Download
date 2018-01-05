@@ -1,5 +1,5 @@
-package com.Utility;
-public class Main {
+package com.Utility.DownloadUtility;
+public class test {
     public static void main(String[] args) {
         try {
             String url = "http://samples.leanpub.com/ignite-sample.pdf";
