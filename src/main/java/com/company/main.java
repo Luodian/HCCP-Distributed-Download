@@ -17,37 +17,37 @@ class Main {
 	public static void main (String[] args) {
 		try {
             IgniteUtility.startDefaultIgnite();
-//			CacheConfiguration cacheCfg = new CacheConfiguration ("myCache");
-//			cacheCfg.setCacheMode (CacheMode.PARTITIONED);
-//
-//			IgniteConfiguration cfg = new IgniteConfiguration ();
-//			cfg.setCacheConfiguration (cacheCfg);
-//			cfg.setPeerClassLoadingEnabled (true);
-//
-//			Ignite ignite = Ignition.start (cfg);
-//
-//			IgniteTransactions transactions = ignite.transactions ();
-//
-//			Transaction tx = transactions.txStart ();
-//
-//			IgniteCache<String, byte[]> cache = ignite.cache ("myCache");
-//
-//
-////			try (InputStream input = new FileInputStream ("/Users/luodian/Desktop/HCCP-Distributed-Download/src/main/resources/sample.jpg")) {
-////				byte[] buf = new byte[35000000];
-////				int bytesRead = 0;
-////				// 2.read(byte b)
-////				// bytesRead = input.read(buf);
-////				// 3.read(byte b[], int off, int len)
-////				bytesRead = input.read (buf, 0, 35000000);
-////
-////				cache.put ("sample", buf);
-////			} catch (Exception e) {
-////				e.printStackTrace ();
-////			}
-//
-//			// Add listener for unordered messages on all remote nodes.
-//			tx.commit ();
+			CacheConfiguration cacheCfg = new CacheConfiguration ("myCache");
+			cacheCfg.setCacheMode (CacheMode.PARTITIONED);
+
+			IgniteConfiguration cfg = new IgniteConfiguration ();
+			cfg.setCacheConfiguration (cacheCfg);
+			cfg.setPeerClassLoadingEnabled (true);
+
+			Ignite ignite = Ignition.start (cfg);
+
+			IgniteTransactions transactions = ignite.transactions ();
+
+			Transaction tx = transactions.txStart ();
+
+			IgniteCache<String, byte[]> cache = ignite.cache ("myCache");
+
+
+			try (InputStream input = new FileInputStream ("/Users/luodian/Desktop/HCCP-Distributed-Download/src/main/resources/sample.jpg")) {
+				byte[] buf = new byte[35000000];
+				int bytesRead = 0;
+				// 2.read(byte b)
+				// bytesRead = input.read(buf);
+				// 3.read(byte b[], int off, int len)
+				bytesRead = input.read (buf, 0, 35000000);
+
+				cache.put ("sample", buf);
+			} catch (Exception e) {
+				e.printStackTrace ();
+			}
+
+			// Add listener for unordered messages on all remote nodes.
+			tx.commit ();
 		} catch (Exception e) {
 			e.printStackTrace ();
 		}

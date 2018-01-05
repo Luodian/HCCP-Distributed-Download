@@ -6,6 +6,7 @@ import org.apache.ignite.IgniteMessaging;
 import org.apache.ignite.Ignition;
 import org.apache.ignite.configuration.IgniteConfiguration;
 
+import java.io.*;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.UUID;
@@ -32,10 +33,10 @@ public class IgniteUtility {
 	}
 	
 	public static Ignite startDefaultIgnite () {
-//		CacheConfiguration cacheCfg = new CacheConfiguration ("Cache");
-//		cacheCfg.setCacheMode (CacheMode.PARTITIONED);
+		//		CacheConfiguration cacheCfg = new CacheConfiguration ("Cache");
+		//		cacheCfg.setCacheMode (CacheMode.PARTITIONED);
 		IgniteConfiguration cfg = new IgniteConfiguration ();
-//		cfg.setCacheConfiguration (cacheCfg);
+		//		cfg.setCacheConfiguration (cacheCfg);
 		cfg.setPeerClassLoadingEnabled (true);
 		Ignite ignite = Ignition.start (cfg);
 		IgniteMessaging igniteMessaging = ignite.message (ignite.cluster ().forLocal ());
@@ -63,7 +64,19 @@ public class IgniteUtility {
 		return ignite;
 	}
 	
-	public static void ConcateByteArray (ArrayList<byte[]> multi_file) {
-	
+	public static void ConcateByteArray (ArrayList<byte[]> multi_file, String filename) {
+		BufferedOutputStream bufferedOutput = null;
+		try {
+			File file = new File ("Dowloads/" + filename);
+			OutputStream output = new FileOutputStream (file);
+			bufferedOutput = new BufferedOutputStream (output);
+			
+			for (byte[] aMulti_file : multi_file) {
+				bufferedOutput.write (aMulti_file);
+			}
+			bufferedOutput.close ();
+		} catch (IOException e) {
+			e.printStackTrace ();
+		}
 	}
 }
