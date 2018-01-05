@@ -6,8 +6,8 @@ public class FileMerge {
     private long[] endIndexArray;
     private String targetFilePath;
     private int maxIndexRange;
-
-    FileMerge(String[] filePathArray, long[] startIndexArray, long[] endIndexArray, String targetFilePath) {
+	
+	public FileMerge (String[] filePathArray, long[] startIndexArray, long[] endIndexArray, String targetFilePath) {
         this.filePathArray = filePathArray;
         this.startIndexArray = startIndexArray;
         this.endIndexArray = endIndexArray;
