@@ -19,8 +19,8 @@ public class test {
                     "C:\\Users\\YuhongZhong\\Desktop\\ignite-sample.pdf.2"};
             String url = "http://samples.leanpub.com/ignite-sample.pdf";
             long fileLength = FileInfo.getFileSize(url);
-            int[] startIndexArray = {0, 10};
-            int[] endIndexArray = {10, (int)fileLength};
+            long[] startIndexArray = {0, 10};
+            long[] endIndexArray = {10, (int)fileLength};
             String targetPath = "C:\\Users\\YuhongZhong\\Desktop\\ignite-sample.pdf";
             FileMerge merger = new FileMerge(filePathArray, startIndexArray, endIndexArray, targetPath);
             merger.merge();
