@@ -14,7 +14,6 @@ import java.io.InputStream;
 
 class Main {
 	public static void main (String[] args) {
-		
 		try {
 			CacheConfiguration cacheCfg = new CacheConfiguration ("myCache");
 			cacheCfg.setCacheMode (CacheMode.PARTITIONED);
@@ -41,7 +40,6 @@ class Main {
 				bytesRead = input.read (buf, 0, 35000000);
 				
 				cache.put ("sample", buf);
-				
 			} catch (Exception e) {
 				e.printStackTrace ();
 			}
