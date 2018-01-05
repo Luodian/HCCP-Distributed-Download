@@ -12,27 +12,50 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.UUID;
 
+import static com.Utility.DownloadUtility.FileInfo.getFileSize;
+
 public class IgniteUtility {
-    public static void broadcast (Ignite ignite, UUID son_id, String url, long start, long end, int seriesID) {
-        try {
-            // Messaging instance over given cluster group (in this case, remote nodes).
-            IgniteMessaging rmtMsg = ignite.message (ignite.cluster ().forNodeId (son_id));
-            ArrayList<String> config = new ArrayList<> ();
-            config.add (url);
-            config.add (String.valueOf (start));
-            config.add (String.valueOf (end));
-            config.add (String.valueOf (seriesID));
-            rmtMsg.sendOrdered ("DownloadTaskComing", config.toString (), 1);
-        } catch (Exception e) {
-            e.printStackTrace ();
-        }
-    }
+
+	// 根据接收到的Url和分段数，启动对应数目个结点。
+	public static void multicast (Ignite ignite, Collection<UUID> sons_id, String url, int seg_num) {
+		int cnt = 1;
+		long fileLen = getFileSize (url);
+		long bulk_size = (long) Math.ceil (((double) fileLen) / seg_num);
+		long mod_size = seg_num * bulk_size - fileLen;
+		for (UUID nodeID : sons_id) {
+			if (cnt != seg_num) {
+				broadcast (ignite, nodeID, url, (cnt - 1) * bulk_size, cnt * bulk_size, cnt);
+				cnt++;
+			} else {
+				broadcast (ignite, nodeID, url, cnt * bulk_size, cnt * bulk_size + mod_size, cnt);
+				cnt++;
+			}
+		}
+	}
+
+	public static void broadcast (Ignite ignite, UUID son_id, String url, long start, long end, int seriesID) {
+		try {
+			// Messaging instance over given cluster group (in this case, remote nodes).
+			IgniteMessaging rmtMsg = ignite.message (ignite.cluster ().forRemotes ().forNodeId (son_id));
+			ArrayList<String> config = new ArrayList<> ();
+			config.add (url);
+			config.add (String.valueOf (start));
+			config.add (String.valueOf (end));
+			config.add (String.valueOf (seriesID));
+			rmtMsg.sendOrdered ("DownloadTaskComing", config.toString (), 1);
+		} catch (Exception e) {
+			e.printStackTrace ();
+		}
+	}
 	
 	public static Ignite startDefaultIgnite () {
 		CacheConfiguration cacheCfg = new CacheConfiguration("myCache");
 		cacheCfg.setCacheMode (CacheMode.PARTITIONED);
+		//  CacheConfiguration cacheCfg = new CacheConfiguration ("Cache");
+		//	cacheCfg.setCacheMode (CacheMode.PARTITIONED);
 		IgniteConfiguration cfg = new IgniteConfiguration ();
 		cfg.setCacheConfiguration (cacheCfg);
+		//	cfg.setCacheConfiguration (cacheCfg);
 		cfg.setPeerClassLoadingEnabled (true);
 
 		Ignite ignite = Ignition.start (cfg);
@@ -87,7 +110,19 @@ public class IgniteUtility {
 		return ignite;
 	}
 	
-	public static void ConcateByteArray (ArrayList<byte[]> multi_file) {
-	
+	public static void ConcateByteArray (ArrayList<byte[]> multi_file, String filename) {
+		BufferedOutputStream bufferedOutput = null;
+		try {
+			File file = new File ("Dowloads/" + filename);
+			OutputStream output = new FileOutputStream (file);
+			bufferedOutput = new BufferedOutputStream (output);
+
+			for (byte[] aMulti_file : multi_file) {
+				bufferedOutput.write (aMulti_file);
+			}
+			bufferedOutput.close ();
+		} catch (IOException e) {
+			e.printStackTrace ();
+		}
 	}
 }
