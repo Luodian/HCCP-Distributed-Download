@@ -2,16 +2,15 @@ package com.Utility.IgniteUtl;
 
 import com.Utility.DownloadUtility.FileInfo;
 import com.Utility.DownloadUtility.SiteFileFetch;
-import org.apache.ignite.Ignite;
-import org.apache.ignite.IgniteCluster;
-import org.apache.ignite.IgniteMessaging;
-import org.apache.ignite.Ignition;
+import org.apache.ignite.*;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cluster.ClusterGroup;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.transactions.Transaction;
 
+import java.io.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -32,12 +31,19 @@ public class IgniteUtility {
 	}
 
 	public static Ignite startDefaultIgnite(){
-//		CacheConfiguration cacheCfg = new CacheConfiguration ("Cache");
-//		cacheCfg.setCacheMode (CacheMode.PARTITIONED);
+		CacheConfiguration cacheCfg = new CacheConfiguration ("myCache");
+		cacheCfg.setCacheMode (CacheMode.PARTITIONED);
+
 		IgniteConfiguration cfg = new IgniteConfiguration ();
-//		cfg.setCacheConfiguration (cacheCfg);
+		cfg.setCacheConfiguration (cacheCfg);
 		cfg.setPeerClassLoadingEnabled (true);
 		Ignite ignite = Ignition.start (cfg);
+		IgniteTransactions transactions = ignite.transactions ();
+
+		Transaction tx = transactions.txStart ();
+
+		IgniteCache<String, ArrayList<byte[]>> cache = ignite.cache ("myCache");
+
 		IgniteMessaging igniteMessaging = ignite.message(ignite.cluster().forLocal());
 		//监听的消息是接受方而不是发送方，监听的是接受这个动作而不是发送这个东作，所以其实这里填写local就可以了
 		igniteMessaging.remoteListen("DownloadTaskComing",(nodeID, msg) -> {
@@ -56,6 +62,22 @@ public class IgniteUtility {
 			try {
 				siteFileFetch.join();
 				//当前版本一台机子只允许一个节点
+				File file = new File("Tmp/"+nodeID+"_"+seriesID);
+				ArrayList<byte[]> returnResult = new ArrayList<byte[]>();
+				try (FileInputStream input = new FileInputStream(file);
+					BufferedInputStream inputStream = new BufferedInputStream(input)) {
+					byte[] tmpBytes = new byte[1024 * 1024];
+					int bytesRead = input.read (tmpBytes);
+					while (bytesRead != -1){
+							returnResult.add(tmpBytes);
+							tmpBytes = new byte[1024 * 1024];
+							bytesRead = input.read(tmpBytes);
+					}
+					cache.put (seriesID, returnResult);
+					igniteMessaging.send(seriesID, "SUCCESS");
+				} catch (Exception e) {
+					e.printStackTrace ();
+				}
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}
