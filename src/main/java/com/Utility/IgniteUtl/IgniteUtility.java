@@ -137,12 +137,8 @@ public class IgniteUtility {
 		cfg.setPeerClassLoadingEnabled (true);
 		
 		Ignite ignite = Ignition.start (cfg);
-		
-		IgniteTransactions transactions = ignite.transactions ();
-		
-		Transaction tx = transactions.txStart ();
-		
-		IgniteCache<String, ArrayList<byte[]>> cache = ignite.cache (cachename);
+        IgniteTransactions transactions = ignite.transactions ();
+
 		
 		IgniteMessaging igniteMessaging = ignite.message (ignite.cluster ().forLocal());
 		//监听的消息是接受方而不是发送方，监听的是接受这个动作而不是发送这个东作，所以其实这里填写local就可以了
@@ -162,26 +158,33 @@ public class IgniteUtility {
 			siteFileFetch.start ();
 			try {
 				siteFileFetch.join ();
-				File file = new File ("./Downloads/" + nodeID + "_" + seriesID);
-				ArrayList<byte[]> tmpArrays = new ArrayList<byte[]> ();
-				try (FileInputStream fileInputStream = new FileInputStream (file);
-				     BufferedInputStream bufferedInputStream = new BufferedInputStream (fileInputStream)
-				) {
-					byte[] bytes = new byte[1024 * 1024];
-					int is_end = bufferedInputStream.read (bytes);
-					while (is_end != -1) {
-						tmpArrays.add(bytes);
-						bytes = new byte[1024 * 1024];
-						is_end = bufferedInputStream.read(bytes);
-					}
-					cache.put(seriesID, tmpArrays);
-					IgniteMessaging messaging = ignite.message (ignite.cluster ().forNodeId (nodeID));
-					messaging.send (seriesID, "SUCCESS");
-					System.out.println ("Send Message!");
-				} catch (IOException e) {
-					e.printStackTrace ();
-				}
-				//当前版本一台机子只允许一个节点
+
+
+                Transaction tx = transactions.txStart ();
+
+                IgniteCache<String, ArrayList<byte[]>> cache = ignite.cache (cachename);
+
+                File file = new File ("./Downloads/" + nodeID + "_" + seriesID);
+                ArrayList<byte[]> tmpArrays = new ArrayList<byte[]> ();
+                try (FileInputStream fileInputStream = new FileInputStream (file);
+                     BufferedInputStream bufferedInputStream = new BufferedInputStream (fileInputStream)
+                ) {
+                    byte[] bytes = new byte[1024 * 1024];
+                    int is_end = bufferedInputStream.read (bytes);
+                    while (is_end != -1) {
+                        tmpArrays.add(bytes);
+                        bytes = new byte[1024 * 1024];
+                        is_end = bufferedInputStream.read(bytes);
+                    }
+                    cache.put(seriesID, tmpArrays);
+                    tx.commit();
+                    IgniteMessaging messaging = ignite.message (ignite.cluster ().forNodeId (nodeID));
+                    messaging.send (seriesID, "SUCCESS");
+
+                    System.out.println ("Send Message!");
+                } catch (IOException e) {
+                    e.printStackTrace ();
+                }
 			} catch (InterruptedException e) {
 				e.printStackTrace ();
 			}
