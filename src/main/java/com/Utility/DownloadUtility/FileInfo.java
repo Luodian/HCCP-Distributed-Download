@@ -1,5 +1,5 @@
 package com.Utility.DownloadUtility;
-import java.io.IOException;
+
 import java.net.HttpURLConnection;
 import java.net.URL;
 
@@ -10,7 +10,7 @@ public class FileInfo {
         try {
             URL url = new URL(siteUrl);
             HttpURLConnection httpConnection = (HttpURLConnection) url.openConnection();
-            httpConnection.setRequestProperty("User-Agent", "higher_compute");
+	        httpConnection.setRequestProperty ("User-Agent", "Highter_Compute");
             int responseCode = httpConnection.getResponseCode();
             if (responseCode >= 400) {
                 Utility.processErrorCode(responseCode);

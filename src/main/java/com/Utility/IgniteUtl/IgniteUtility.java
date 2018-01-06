@@ -3,6 +3,8 @@ package com.Utility.IgniteUtl;
 import com.Utility.DownloadUtility.SiteFileFetch;
 import org.apache.ignite.*;
 import org.apache.ignite.cache.CacheMode;
+import org.apache.ignite.cluster.ClusterGroup;
+import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.transactions.Transaction;
@@ -15,7 +17,23 @@ import java.util.UUID;
 import static com.Utility.DownloadUtility.FileInfo.getFileSize;
 
 public class IgniteUtility {
-
+	
+	public static void mod_test (long filelen, int seg_num) {
+		int cnt = 1;
+		long bulk_size = (long) Math.ceil (((double) filelen) / seg_num);
+		long mod_size = seg_num * bulk_size - filelen;
+		for (int i = 1; i <= seg_num; ++i) {
+			if (i != seg_num) {
+				System.out.println ((i - 1) * bulk_size);
+				System.out.println (i * bulk_size);
+			} else {
+				System.out.println ((i - 1) * bulk_size);
+				System.out.println (i * bulk_size + mod_size + 1);
+			}
+		}
+	}
+	
+	
 	// 根据接收到的Url和分段数，启动对应数目个结点。
 	public static void multicast (Ignite ignite, Collection<UUID> sons_id, String url, int seg_num) {
 		int cnt = 1;
@@ -27,12 +45,12 @@ public class IgniteUtility {
 				broadcast (ignite, nodeID, url, (cnt - 1) * bulk_size, cnt * bulk_size, cnt);
 				cnt++;
 			} else {
-				broadcast (ignite, nodeID, url, cnt * bulk_size, cnt * bulk_size + mod_size, cnt);
+				broadcast (ignite, nodeID, url, 0, bulk_size, cnt);
 				cnt++;
 			}
 		}
 	}
-
+	
 	public static void broadcast (Ignite ignite, UUID son_id, String url, long start, long end, int seriesID) {
 		try {
 			// Messaging instance over given cluster group (in this case, remote nodes).
@@ -48,81 +66,127 @@ public class IgniteUtility {
 		}
 	}
 	
-	public static Ignite startDefaultIgnite () {
-		CacheConfiguration cacheCfg = new CacheConfiguration("myCache");
+	public static void ConcateByteArray (ArrayList<byte[]> multi_file, String filename) {
+		try {
+			DataOutputStream dout = new DataOutputStream (new FileOutputStream (filename));
+			
+			System.out.println (filename);
+			
+			for (byte[] aMulti_file : multi_file) {
+				dout.write (aMulti_file);
+			}
+			dout.close ();
+		} catch (IOException e) {
+			e.printStackTrace ();
+		}
+	}
+	
+	public static Ignite startDownloadIgnite (String url, String filepath, String filename, String cachename) {
+		CacheConfiguration cacheCfg = new CacheConfiguration (cachename);
 		cacheCfg.setCacheMode (CacheMode.PARTITIONED);
-		//  CacheConfiguration cacheCfg = new CacheConfiguration ("Cache");
-		//	cacheCfg.setCacheMode (CacheMode.PARTITIONED);
+		
 		IgniteConfiguration cfg = new IgniteConfiguration ();
 		cfg.setCacheConfiguration (cacheCfg);
-		//	cfg.setCacheConfiguration (cacheCfg);
+		
 		cfg.setPeerClassLoadingEnabled (true);
-
+		
 		Ignite ignite = Ignition.start (cfg);
+		
+		Collection<UUID> node_ids = new ArrayList<> ();
+		
+		ClusterGroup cg = ignite.cluster ().forRemotes ();
+		Collection<ClusterNode> clusterNodes = cg.nodes ();
+		for (ClusterNode e : clusterNodes) {
+			node_ids.add (e.id ());
+		}
 
-		IgniteTransactions transactions = ignite.transactions ();
-
-		Transaction tx = transactions.txStart ();
-
-		IgniteCache<String, ArrayList<byte[]>> cache = ignite.cache ("myCache");
-
-		IgniteMessaging igniteMessaging = ignite.message (ignite.cluster ().forLocal());
-		//监听的消息是接受方而不是发送方，监听的是接受这个动作而不是发送这个东作，所以其实这里填写local就可以了
-		igniteMessaging.remoteListen ("DownloadTaskComing", (nodeID, msg) -> {
-			msg = msg.toString ().substring (1, msg.toString ().length () - 1);
-			String tmp[] = msg.toString ().split (",");
-			if (tmp.length != 3) {
-				System.err.println ("WRONG DOWNLOAD TASK COMING MESSAGE");
-				return true;
+//		String url = "https://ws1.sinaimg.cn/large/006tNc79ly1fn4o49dqcaj30sg0sgmzo.jpg";
+		
+		multicast (ignite, node_ids, url, 1);
+		
+		ArrayList<byte[]> buffer = new ArrayList<> ();
+		
+		IgniteMessaging igniteMessaging = ignite.message (ignite.cluster ().forLocal ());
+		
+		igniteMessaging.localListen (String.valueOf (1), (nodeID, msg) ->
+		{
+			System.out.println (msg);
+//				System.out.println ("LLLLLLLLLLl");
+			if (msg.equals ("SUCCESS")) {
+//					System.out.println ("LLLLLLLLLLl");
+				IgniteCache<String, ArrayList<byte[]>> tmp_cache = ignite.cache (cachename);
+				ArrayList<byte[]> tmp_byte = tmp_cache.get (String.valueOf (1));
+				buffer.addAll (tmp_byte);
 			}
-			String url = tmp[0];
-			long start = Long.valueOf (tmp[1]);
-			long end = Long.valueOf (tmp[2]);
-			String seriesID = tmp[3];
-			SiteFileFetch siteFileFetch = new SiteFileFetch (url, "Tmp", nodeID + "_" + seriesID, start, end, 5);
-			try {
-				siteFileFetch.join ();
-                File file = new File("Tmp/" + nodeID + "_" + seriesID);
-                ArrayList<byte[]> tmpArrays = new ArrayList<byte[]>();
-                try (FileInputStream fileInputStream = new FileInputStream(file);
-                     BufferedInputStream bufferedInputStream = new BufferedInputStream(fileInputStream)
-                ){
-                    byte[] bytes = new byte[1024 * 1024];
-                    int is_end = bufferedInputStream.read(bytes);
-                    while (is_end != 1) {
-						tmpArrays.add(bytes);
-						bytes = new byte[1024 * 1024];
-						is_end = bufferedInputStream.read(bytes);
-					}
-					cache.put(seriesID, tmpArrays);
-                    igniteMessaging.send(seriesID, "SUCCESS");
-                }catch (FileNotFoundException e) {
-                    e.printStackTrace();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-                //当前版本一台机子只允许一个节点
-			} catch (InterruptedException e) {
-				e.printStackTrace ();
+			if (filepath.charAt (filepath.length () - 1) != '/') {
+				ConcateByteArray (buffer, filepath.concat ("/") + filename);
+			} else {
+				ConcateByteArray (buffer, filepath + filename);
 			}
 			return true;
 		});
 		return ignite;
 	}
 	
-	public static void ConcateByteArray (ArrayList<byte[]> multi_file, String filename) {
-		BufferedOutputStream bufferedOutput = null;
-		try {
-			File file = new File ("Dowloads/" + filename);
-			OutputStream output = new FileOutputStream (file);
-			bufferedOutput = new BufferedOutputStream (output);
-
-			for (byte[] aMulti_file : multi_file) {
-				bufferedOutput.write (aMulti_file);
+	public static Ignite startDefaultIgnite (String cachename) {
+		CacheConfiguration cacheCfg = new CacheConfiguration (cachename);
+		cacheCfg.setCacheMode (CacheMode.PARTITIONED);
+		
+		IgniteConfiguration cfg = new IgniteConfiguration ();
+		cfg.setCacheConfiguration (cacheCfg);
+		cfg.setPeerClassLoadingEnabled (true);
+		
+		Ignite ignite = Ignition.start (cfg);
+		
+		IgniteTransactions transactions = ignite.transactions ();
+		
+		Transaction tx = transactions.txStart ();
+		
+		IgniteCache<String, ArrayList<byte[]>> cache = ignite.cache (cachename);
+		
+		IgniteMessaging igniteMessaging = ignite.message (ignite.cluster ().forLocal());
+		//监听的消息是接受方而不是发送方，监听的是接受这个动作而不是发送这个东作，所以其实这里填写local就可以了
+		igniteMessaging.remoteListen ("DownloadTaskComing", (nodeID, msg) -> {
+			msg = msg.toString ().substring (1, msg.toString ().length () - 1);
+			String tmp[] = msg.toString ().split (", ");
+			if (tmp.length != 4) {
+				System.err.println ("WRONG DOWNLOAD TASK COMING MESSAGE");
+				return true;
 			}
-			bufferedOutput.close ();
-		} catch (IOException e) {
-			e.printStackTrace ();
-		}
+			System.err.println (msg.toString ());
+			String url = tmp[0];
+			long start = Long.valueOf (tmp[1]);
+			long end = Long.valueOf (tmp[2]);
+			String seriesID = tmp[3];
+			SiteFileFetch siteFileFetch = new SiteFileFetch (url, "./Downloads/", nodeID + "_" + seriesID, start, end, 5);
+			siteFileFetch.start ();
+			try {
+				siteFileFetch.join ();
+				File file = new File ("./Downloads/" + nodeID + "_" + seriesID);
+				ArrayList<byte[]> tmpArrays = new ArrayList<byte[]> ();
+				try (FileInputStream fileInputStream = new FileInputStream (file);
+				     BufferedInputStream bufferedInputStream = new BufferedInputStream (fileInputStream)
+				) {
+					byte[] bytes = new byte[1024 * 1024];
+					int is_end = bufferedInputStream.read (bytes);
+					while (is_end != -1) {
+						tmpArrays.add(bytes);
+						bytes = new byte[1024 * 1024];
+						is_end = bufferedInputStream.read(bytes);
+					}
+					cache.put(seriesID, tmpArrays);
+					IgniteMessaging messaging = ignite.message (ignite.cluster ().forNodeId (nodeID));
+					messaging.send (seriesID, "SUCCESS");
+					System.out.println ("Send Message!");
+				} catch (IOException e) {
+					e.printStackTrace ();
+				}
+				//当前版本一台机子只允许一个节点
+			} catch (InterruptedException e) {
+				e.printStackTrace ();
+			}
+			return true;
+		});
+		return ignite;
 	}
 }

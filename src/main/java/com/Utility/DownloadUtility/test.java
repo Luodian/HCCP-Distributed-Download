@@ -1,24 +1,13 @@
 package com.Utility.DownloadUtility;
 
-import org.apache.ignite.Ignite;
-import org.apache.ignite.Ignition;
-import org.apache.ignite.cache.CacheMode;
-import org.apache.ignite.configuration.CacheConfiguration;
-import org.apache.ignite.configuration.IgniteConfiguration;
+import static com.Utility.IgniteUtl.IgniteUtility.mod_test;
 
 public class test {
 	public static void main (String[] args) {
 		try {
-			CacheConfiguration cacheCfg = new CacheConfiguration ("myCache");
-			cacheCfg.setCacheMode (CacheMode.PARTITIONED);
-			
-			IgniteConfiguration cfg = new IgniteConfiguration ();
-			cfg.setCacheConfiguration (cacheCfg);
-			cfg.setPeerClassLoadingEnabled (true);
-			
-			Ignite ignite = Ignition.start (cfg);
-			
-			
+			///Users/luodian/Desktop/a.jpg
+//			Ignite ignite = startDownloadIgnite ("https://ws1.sinaimg.cn/large/006tNc79ly1fn4o49dqcaj30sg0sgmzo.jpg","/Users/luodian/Desktop/","b.jpg","A");
+			mod_test (16132, 5);
 		} catch (Exception e) {
             e.printStackTrace();
         }

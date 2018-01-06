@@ -1,21 +1,16 @@
 package com.company;
 
-import com.Utility.IgniteUtl.IgniteUtility;
 import org.apache.ignite.Ignite;
-import org.apache.ignite.IgniteCache;
-import org.apache.ignite.IgniteTransactions;
-import org.apache.ignite.Ignition;
-import org.apache.ignite.cache.CacheMode;
-import org.apache.ignite.configuration.CacheConfiguration;
-import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.transactions.Transaction;
 
-import java.io.FileInputStream;
-import java.io.InputStream;
+import static com.Utility.IgniteUtl.IgniteUtility.startDefaultIgnite;
 
 class Main {
 	public static void main (String[] args) {
-            IgniteUtility.startDefaultIgnite();
+		try {
+			Ignite ignite = startDefaultIgnite ("A");
+		} catch (Exception e) {
+			e.printStackTrace ();
+		}
 	}
 }
 
