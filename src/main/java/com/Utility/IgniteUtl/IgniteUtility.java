@@ -17,16 +17,16 @@ import java.util.UUID;
 
 import static com.Utility.DownloadUtility.FileInfo.getFileSize;
 
-public class IgniteUtility implements Serializable {
-	
+public class IgniteUtility {
+
 	// 根据接收到的Url和分段数，启动对应数目个结点。
 	public static void multicast (Ignite ignite, Collection<UUID> sons_id, String url, int seg_num) {
 		int cnt = 1;
 		long fileLen = getFileSize (url);
-		
+
 		long[] startPos = new long[seg_num];
 		long[] endPos = new long[seg_num];
-		
+
 		startPos = Utility.fileSplit (0, fileLen, seg_num);
 		if (startPos == null) {
 			Utility.log ("File invalided!");
@@ -107,10 +107,11 @@ public class IgniteUtility implements Serializable {
 //				System.out.println ("LLLLLLLLLLl");
 			if (msg.equals ("SUCCESS")) {
 //					System.out.println ("LLLLLLLLLLl");
-				IgniteCache<String, ArrayList<byte[]>> tmp_cache = ignite.cache (cachename);
+				IgniteCache<String, ArrayListSerializaion> tmp_cache = ignite.cache (cachename);
 				tx.commit ();
-				ArrayList<byte[]> tmp_byte = tmp_cache.get (String.valueOf (1));
-				buffer.addAll (tmp_byte);
+				ArrayListSerializaion tmp_byte = tmp_cache.get (String.valueOf (1));
+
+				buffer.addAll (tmp_byte.bytes);
 			}
 			if (filepath.charAt (filepath.length () - 1) != '/') {
 				ConcateByteArray (buffer, filepath.concat ("/") + filename);
@@ -131,8 +132,8 @@ public class IgniteUtility implements Serializable {
 		cfg.setPeerClassLoadingEnabled (true);
 		
 		Ignite ignite = Ignition.start (cfg);
-		IgniteTransactions transactions = ignite.transactions ();
-		
+        IgniteTransactions transactions = ignite.transactions ();
+
 		
 		IgniteMessaging igniteMessaging = ignite.message (ignite.cluster ().forLocal());
 		//监听的消息是接受方而不是发送方，监听的是接受这个动作而不是发送这个东作，所以其实这里填写local就可以了
@@ -152,13 +153,14 @@ public class IgniteUtility implements Serializable {
 			siteFileFetch.start ();
 			try {
 				siteFileFetch.join ();
-				
-				
+
+
 				Transaction tx = transactions.txStart ();
-				
-				IgniteCache<String, ArrayList<byte[]>> cache = ignite.cache (cachename);
-				
+
+				IgniteCache<String, ArrayListSerializaion> cache = ignite.cache (cachename);
+
 				File file = new File ("./Downloads/" + nodeID + "_" + seriesID);
+				ArrayListSerializaion as = new ArrayListSerializaion();
 				ArrayList<byte[]> tmpArrays = new ArrayList<byte[]> ();
 				try (FileInputStream fileInputStream = new FileInputStream (file);
 				     BufferedInputStream bufferedInputStream = new BufferedInputStream (fileInputStream)
@@ -170,11 +172,12 @@ public class IgniteUtility implements Serializable {
 						bytes = new byte[1024 * 1024];
 						is_end = bufferedInputStream.read(bytes);
 					}
-					cache.put(seriesID, tmpArrays);
+					as.bytes = tmpArrays;
+					cache.put(seriesID, as);
 					tx.commit ();
 					IgniteMessaging messaging = ignite.message (ignite.cluster ().forNodeId (nodeID));
 					messaging.send (seriesID, "SUCCESS");
-					
+
 					System.out.println ("Send Message!");
 				} catch (IOException e) {
 					e.printStackTrace ();

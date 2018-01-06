@@ -2,10 +2,11 @@ package com.Utility.DownloadUtility;
 
 import org.apache.ignite.Ignite;
 
-import static com.Utility.IgniteUtl.IgniteUtility.mod_test;
+import java.io.Serializable;
+
 import static com.Utility.IgniteUtl.IgniteUtility.startDownloadIgnite;
 
-public class test {
+public class test implements Serializable {
 	public static void main (String[] args) {
 		try {
 			///Users/luodian/Desktop/a.jpg
