@@ -14,6 +14,7 @@ import java.io.*;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.UUID;
+import java.util.Vector;
 
 import static com.Utility.DownloadUtility.FileInfo.getFileSize;
 
@@ -127,6 +128,26 @@ public class IgniteUtility {
 				return true;
 			});
 		}
+		igniteMessaging.localListen (String.valueOf (1), (nodeID, msg) ->
+		{
+			Transaction tx = ignite.transactions ().txStart ();
+			System.out.println (msg);
+//				System.out.println ("LLLLLLLLLLl");
+			if (msg.equals ("SUCCESS")) {
+//					System.out.println ("LLLLLLLLLLl");
+				IgniteCache<String, ArrayListSerializaion<byte[]>> tmp_cache = ignite.cache (cachename);
+				tx.commit ();
+				ArrayListSerializaion<byte[]> tmp_byte = tmp_cache.get (String.valueOf (1));
+
+				buffer.addAll (tmp_byte);
+			}
+			if (filepath.charAt (filepath.length () - 1) != '/') {
+				ConcateByteArray (buffer, filepath.concat ("/") + filename);
+			} else {
+				ConcateByteArray (buffer, filepath + filename);
+			}
+			return true;
+		});
 		return ignite;
 	}
 	
@@ -168,7 +189,6 @@ public class IgniteUtility {
 
 				File file = new File ("./Downloads/" + nodeID + "_" + seriesID);
                 ArrayListSerializaion<byte[]> tmpArrays = new ArrayListSerializaion<byte[]>();
-				
 				try (FileInputStream fileInputStream = new FileInputStream (file);
 				     BufferedInputStream bufferedInputStream = new BufferedInputStream (fileInputStream)
 				) {
