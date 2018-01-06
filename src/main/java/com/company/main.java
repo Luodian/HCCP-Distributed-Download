@@ -7,8 +7,7 @@ import static com.Utility.IgniteUtl.IgniteUtility.startDefaultIgnite;
 class Main {
 	public static void main (String[] args) {
 		try {
-			Ignite ignite = startDefaultIgnite ();
-			
+			Ignite ignite = startDefaultIgnite ("A");
 		} catch (Exception e) {
 			e.printStackTrace ();
 		}
