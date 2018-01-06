@@ -1,6 +1,7 @@
 package com.Utility.IgniteUtl;
 
 import com.Utility.DownloadUtility.SiteFileFetch;
+import com.Utility.DownloadUtility.Utility;
 import org.apache.ignite.*;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cluster.ClusterGroup;
@@ -18,36 +19,27 @@ import static com.Utility.DownloadUtility.FileInfo.getFileSize;
 
 public class IgniteUtility {
 	
-	public static void mod_test (long filelen, int seg_num) {
-		int cnt = 1;
-		long bulk_size = (long) Math.ceil (((double) filelen) / seg_num);
-		long mod_size = seg_num * bulk_size - filelen;
-		for (int i = 1; i <= seg_num; ++i) {
-			if (i != seg_num) {
-				System.out.println ((i - 1) * bulk_size);
-				System.out.println (i * bulk_size);
-			} else {
-				System.out.println ((i - 1) * bulk_size);
-				System.out.println (i * bulk_size + mod_size + 1);
-			}
-		}
-	}
-	
-	
 	// 根据接收到的Url和分段数，启动对应数目个结点。
 	public static void multicast (Ignite ignite, Collection<UUID> sons_id, String url, int seg_num) {
 		int cnt = 1;
 		long fileLen = getFileSize (url);
-		long bulk_size = (long) Math.ceil (((double) fileLen) / seg_num);
-		long mod_size = seg_num * bulk_size - fileLen;
-		for (UUID nodeID : sons_id) {
-			if (cnt != seg_num) {
-				broadcast (ignite, nodeID, url, (cnt - 1) * bulk_size, cnt * bulk_size, cnt);
-				cnt++;
-			} else {
-				broadcast (ignite, nodeID, url, 0, bulk_size, cnt);
-				cnt++;
+		
+		long[] startPos = new long[seg_num];
+		long[] endPos = new long[seg_num];
+		
+		startPos = Utility.fileSplit (0, fileLen, seg_num);
+		if (startPos == null) {
+			Utility.log ("File invalided!");
+		} else {
+			for (int i = 0; i < endPos.length - 1; i++) {
+				endPos[i] = startPos[i + 1];
 			}
+			endPos[endPos.length - 1] = fileLen;
+		}
+		for (UUID nodeID : sons_id) {
+			assert startPos != null;
+			broadcast (ignite, nodeID, url, startPos[cnt - 1], endPos[cnt - 1], cnt);
+			cnt++;
 		}
 	}
 	
@@ -110,11 +102,13 @@ public class IgniteUtility {
 		
 		igniteMessaging.localListen (String.valueOf (1), (nodeID, msg) ->
 		{
+			Transaction tx = ignite.transactions ().txStart ();
 			System.out.println (msg);
 //				System.out.println ("LLLLLLLLLLl");
 			if (msg.equals ("SUCCESS")) {
 //					System.out.println ("LLLLLLLLLLl");
 				IgniteCache<String, ArrayList<byte[]>> tmp_cache = ignite.cache (cachename);
+				tx.commit ();
 				ArrayList<byte[]> tmp_byte = tmp_cache.get (String.valueOf (1));
 				buffer.addAll (tmp_byte);
 			}
@@ -137,12 +131,8 @@ public class IgniteUtility {
 		cfg.setPeerClassLoadingEnabled (true);
 		
 		Ignite ignite = Ignition.start (cfg);
-		
 		IgniteTransactions transactions = ignite.transactions ();
 		
-		Transaction tx = transactions.txStart ();
-		
-		IgniteCache<String, ArrayList<byte[]>> cache = ignite.cache (cachename);
 		
 		IgniteMessaging igniteMessaging = ignite.message (ignite.cluster ().forLocal());
 		//监听的消息是接受方而不是发送方，监听的是接受这个动作而不是发送这个东作，所以其实这里填写local就可以了
@@ -162,6 +152,12 @@ public class IgniteUtility {
 			siteFileFetch.start ();
 			try {
 				siteFileFetch.join ();
+				
+				
+				Transaction tx = transactions.txStart ();
+				
+				IgniteCache<String, ArrayList<byte[]>> cache = ignite.cache (cachename);
+				
 				File file = new File ("./Downloads/" + nodeID + "_" + seriesID);
 				ArrayList<byte[]> tmpArrays = new ArrayList<byte[]> ();
 				try (FileInputStream fileInputStream = new FileInputStream (file);
@@ -175,13 +171,14 @@ public class IgniteUtility {
 						is_end = bufferedInputStream.read(bytes);
 					}
 					cache.put(seriesID, tmpArrays);
+					tx.commit ();
 					IgniteMessaging messaging = ignite.message (ignite.cluster ().forNodeId (nodeID));
 					messaging.send (seriesID, "SUCCESS");
+					
 					System.out.println ("Send Message!");
 				} catch (IOException e) {
 					e.printStackTrace ();
 				}
-				//当前版本一台机子只允许一个节点
 			} catch (InterruptedException e) {
 				e.printStackTrace ();
 			}
