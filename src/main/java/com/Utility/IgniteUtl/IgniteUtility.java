@@ -1,5 +1,6 @@
 package com.Utility.IgniteUtl;
 
+import com.Utility.DownloadUtility.FileSplitterFetch;
 import com.Utility.DownloadUtility.SiteFileFetch;
 import com.Utility.DownloadUtility.Utility;
 import org.apache.ignite.*;
@@ -63,11 +64,8 @@ public class IgniteUtility {
 	public static void ConcateByteArray (ArrayList<byte[]> multi_file, String filename) {
 		try {
 			FileOutputStream dout = new FileOutputStream (filename);
-			
-			System.out.println (filename);
-			
 			for (byte[] aMulti_file : multi_file) {
-				dout.write (aMulti_file);
+				dout.write(aMulti_file,0 ,aMulti_file.length);
 			}
 			dout.close ();
 		} catch (IOException e) {
@@ -118,7 +116,12 @@ public class IgniteUtility {
 							ArrayListSerializaion<byte[]> tmp_byte = tmp_cache.get (String.valueOf (j));
 							buffer.addAll (tmp_byte);
 						}
-						if (filepath.charAt (filepath.length () - 1) != '/') {
+						int count = 0;
+                        for (byte[] e:buffer) {
+                            count += e.length;
+                        }
+                        System.out.println(count);
+                        if (filepath.charAt (filepath.length () - 1) != '/') {
 							ConcateByteArray (buffer, filepath.concat ("/") + filename);
 						} else {
 							ConcateByteArray (buffer, filepath + filename);
@@ -128,26 +131,6 @@ public class IgniteUtility {
 				return true;
 			});
 		}
-		igniteMessaging.localListen (String.valueOf (1), (nodeID, msg) ->
-		{
-			Transaction tx = ignite.transactions ().txStart ();
-			System.out.println (msg);
-//				System.out.println ("LLLLLLLLLLl");
-			if (msg.equals ("SUCCESS")) {
-//					System.out.println ("LLLLLLLLLLl");
-				IgniteCache<String, ArrayListSerializaion<byte[]>> tmp_cache = ignite.cache (cachename);
-				tx.commit ();
-				ArrayListSerializaion<byte[]> tmp_byte = tmp_cache.get (String.valueOf (1));
-
-				buffer.addAll (tmp_byte);
-			}
-			if (filepath.charAt (filepath.length () - 1) != '/') {
-				ConcateByteArray (buffer, filepath.concat ("/") + filename);
-			} else {
-				ConcateByteArray (buffer, filepath + filename);
-			}
-			return true;
-		});
 		return ignite;
 	}
 	
@@ -192,14 +175,20 @@ public class IgniteUtility {
 				try (FileInputStream fileInputStream = new FileInputStream (file);
 				     BufferedInputStream bufferedInputStream = new BufferedInputStream (fileInputStream)
 				) {
-					byte[] bytes = new byte[1024 * 1024];
-					int is_end = bufferedInputStream.read (bytes);
-					while (is_end != -1) {
-						tmpArrays.add(bytes);
-						bytes = new byte[1024 * 1024];
-						is_end = bufferedInputStream.read(bytes);
-					}
-					cache.put(seriesID, tmpArrays);
+                    byte[] buffer = new byte[1024];
+                    int readBytesAmount;
+                    while ((readBytesAmount = bufferedInputStream.read(buffer, 0, 1024)) > 0 ) {
+                        byte[] additem = new byte[readBytesAmount];
+                        System.arraycopy(buffer, 0, additem, 0, readBytesAmount + start >= end ? (int)(end - start) : readBytesAmount);
+                        buffer = new byte[1024];
+                        tmpArrays.add(additem);
+                    }
+                    int count =0 ;
+                    for (byte[] e:tmpArrays) {
+                        count += e.length;
+                    }
+                    System.out.println(count);
+                    cache.put(seriesID, tmpArrays);
 					tx.commit ();
 					IgniteMessaging messaging = ignite.message (ignite.cluster ().forNodeId (nodeID));
 					messaging.send (seriesID, "SUCCESS");

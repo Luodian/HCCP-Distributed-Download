@@ -10,8 +10,8 @@ public class test implements Serializable {
 	public static void main (String[] args) {
 		try {
 			///Users/luodian/Desktop/a.jpg
-			Ignite ignite = startDownloadIgnite ("https://ws1.sinaimg.cn/large/006tNc79ly1fn4o49dqcaj30sg0sgmzo.jpg","D:/","s.jpg","A");
-//			mod_test (16132, 5);
+			Ignite ignite = startDownloadIgnite ("https://www.python.org/ftp/python/3.6.4/python-3.6.4-embed-amd64.zip","D:/","python-3.6.4-embed-amd64.zip","A", 3);
+			/// /			mod_test (16132, 5);
 		} catch (Exception e) {
             e.printStackTrace();
         }

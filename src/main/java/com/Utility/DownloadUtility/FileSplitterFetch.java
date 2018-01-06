@@ -34,7 +34,7 @@ public class FileSplitterFetch extends Thread {
                 byte[] buffer = new byte[FileSplitterFetch.bufferSize];
                 int readBytesAmount;
                 while ((readBytesAmount = input.read(buffer, 0, FileSplitterFetch.bufferSize)) > 0 && startPos < endPos) {
-                    this.startPos += this.fileAccessInterface.write(buffer, 0, readBytesAmount);
+                    this.startPos += this.fileAccessInterface.write(buffer, 0, readBytesAmount + this.startPos >= this.endPos ? (int)(this.endPos - this.startPos) : readBytesAmount);
                 }
                 Utility.log(String.format("Thread %d finished", this.threadID));
             } catch (Exception e) {
