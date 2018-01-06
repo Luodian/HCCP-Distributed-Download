@@ -1,6 +1,7 @@
 package com.Utility.IgniteUtl;
 
 import com.Utility.DownloadUtility.SiteFileFetch;
+import com.Utility.DownloadUtility.Utility;
 import org.apache.ignite.*;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cluster.ClusterGroup;
@@ -16,16 +17,16 @@ import java.util.UUID;
 
 import static com.Utility.DownloadUtility.FileInfo.getFileSize;
 
-public class IgniteUtility {
-
+public class IgniteUtility implements Serializable {
+	
 	// 根据接收到的Url和分段数，启动对应数目个结点。
 	public static void multicast (Ignite ignite, Collection<UUID> sons_id, String url, int seg_num) {
 		int cnt = 1;
 		long fileLen = getFileSize (url);
-
+		
 		long[] startPos = new long[seg_num];
 		long[] endPos = new long[seg_num];
-
+		
 		startPos = Utility.fileSplit (0, fileLen, seg_num);
 		if (startPos == null) {
 			Utility.log ("File invalided!");
@@ -130,8 +131,8 @@ public class IgniteUtility {
 		cfg.setPeerClassLoadingEnabled (true);
 		
 		Ignite ignite = Ignition.start (cfg);
-        IgniteTransactions transactions = ignite.transactions ();
-
+		IgniteTransactions transactions = ignite.transactions ();
+		
 		
 		IgniteMessaging igniteMessaging = ignite.message (ignite.cluster ().forLocal());
 		//监听的消息是接受方而不是发送方，监听的是接受这个动作而不是发送这个东作，所以其实这里填写local就可以了
@@ -151,33 +152,33 @@ public class IgniteUtility {
 			siteFileFetch.start ();
 			try {
 				siteFileFetch.join ();
-
-
-                Transaction tx = transactions.txStart ();
-
-                IgniteCache<String, ArrayList<byte[]>> cache = ignite.cache (cachename);
-
-                File file = new File ("./Downloads/" + nodeID + "_" + seriesID);
-                ArrayList<byte[]> tmpArrays = new ArrayList<byte[]> ();
-                try (FileInputStream fileInputStream = new FileInputStream (file);
-                     BufferedInputStream bufferedInputStream = new BufferedInputStream (fileInputStream)
-                ) {
-                    byte[] bytes = new byte[1024 * 1024];
-                    int is_end = bufferedInputStream.read (bytes);
-                    while (is_end != -1) {
-                        tmpArrays.add(bytes);
-                        bytes = new byte[1024 * 1024];
-                        is_end = bufferedInputStream.read(bytes);
-                    }
-                    cache.put(seriesID, tmpArrays);
-                    tx.commit();
-                    IgniteMessaging messaging = ignite.message (ignite.cluster ().forNodeId (nodeID));
-                    messaging.send (seriesID, "SUCCESS");
-
-                    System.out.println ("Send Message!");
-                } catch (IOException e) {
-                    e.printStackTrace ();
-                }
+				
+				
+				Transaction tx = transactions.txStart ();
+				
+				IgniteCache<String, ArrayList<byte[]>> cache = ignite.cache (cachename);
+				
+				File file = new File ("./Downloads/" + nodeID + "_" + seriesID);
+				ArrayList<byte[]> tmpArrays = new ArrayList<byte[]> ();
+				try (FileInputStream fileInputStream = new FileInputStream (file);
+				     BufferedInputStream bufferedInputStream = new BufferedInputStream (fileInputStream)
+				) {
+					byte[] bytes = new byte[1024 * 1024];
+					int is_end = bufferedInputStream.read (bytes);
+					while (is_end != -1) {
+						tmpArrays.add(bytes);
+						bytes = new byte[1024 * 1024];
+						is_end = bufferedInputStream.read(bytes);
+					}
+					cache.put(seriesID, tmpArrays);
+					tx.commit ();
+					IgniteMessaging messaging = ignite.message (ignite.cluster ().forNodeId (nodeID));
+					messaging.send (seriesID, "SUCCESS");
+					
+					System.out.println ("Send Message!");
+				} catch (IOException e) {
+					e.printStackTrace ();
+				}
 			} catch (InterruptedException e) {
 				e.printStackTrace ();
 			}
