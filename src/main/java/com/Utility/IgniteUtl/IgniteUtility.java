@@ -3,6 +3,8 @@ package com.Utility.IgniteUtl;
 import com.Utility.DownloadUtility.SiteFileFetch;
 import org.apache.ignite.*;
 import org.apache.ignite.cache.CacheMode;
+import org.apache.ignite.cluster.ClusterGroup;
+import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.transactions.Transaction;
@@ -15,6 +17,21 @@ import java.util.UUID;
 import static com.Utility.DownloadUtility.FileInfo.getFileSize;
 
 public class IgniteUtility {
+	
+	public static void mod_test (long filelen, int seg_num) {
+		int cnt = 1;
+		long bulk_size = (long) Math.ceil (((double) filelen) / seg_num);
+		long mod_size = seg_num * bulk_size - filelen;
+		for (int i = 1; i <= seg_num; ++i) {
+			if (i != seg_num) {
+				System.out.println ((i - 1) * bulk_size);
+				System.out.println (i * bulk_size);
+			} else {
+				System.out.println ((i - 1) * bulk_size);
+				System.out.println (i * bulk_size + mod_size + 1);
+			}
+		}
+	}
 	
 	
 	// 根据接收到的Url和分段数，启动对应数目个结点。
@@ -49,8 +66,70 @@ public class IgniteUtility {
 		}
 	}
 	
-	public static Ignite startDefaultIgnite () {
-		CacheConfiguration cacheCfg = new CacheConfiguration ("myCache");
+	public static void ConcateByteArray (ArrayList<byte[]> multi_file, String filename) {
+		try {
+			DataOutputStream dout = new DataOutputStream (new FileOutputStream (filename));
+			
+			System.out.println (filename);
+			
+			for (byte[] aMulti_file : multi_file) {
+				dout.write (aMulti_file);
+			}
+			dout.close ();
+		} catch (IOException e) {
+			e.printStackTrace ();
+		}
+	}
+	
+	public static Ignite startDownloadIgnite (String url, String filepath, String filename, String cachename) {
+		CacheConfiguration cacheCfg = new CacheConfiguration (cachename);
+		cacheCfg.setCacheMode (CacheMode.PARTITIONED);
+		
+		IgniteConfiguration cfg = new IgniteConfiguration ();
+		cfg.setCacheConfiguration (cacheCfg);
+		
+		cfg.setPeerClassLoadingEnabled (true);
+		
+		Ignite ignite = Ignition.start (cfg);
+		
+		Collection<UUID> node_ids = new ArrayList<> ();
+		
+		ClusterGroup cg = ignite.cluster ().forRemotes ();
+		Collection<ClusterNode> clusterNodes = cg.nodes ();
+		for (ClusterNode e : clusterNodes) {
+			node_ids.add (e.id ());
+		}
+
+//		String url = "https://ws1.sinaimg.cn/large/006tNc79ly1fn4o49dqcaj30sg0sgmzo.jpg";
+		
+		multicast (ignite, node_ids, url, 1);
+		
+		ArrayList<byte[]> buffer = new ArrayList<> ();
+		
+		IgniteMessaging igniteMessaging = ignite.message (ignite.cluster ().forLocal ());
+		
+		igniteMessaging.localListen (String.valueOf (1), (nodeID, msg) ->
+		{
+			System.out.println (msg);
+//				System.out.println ("LLLLLLLLLLl");
+			if (msg.equals ("SUCCESS")) {
+//					System.out.println ("LLLLLLLLLLl");
+				IgniteCache<String, ArrayList<byte[]>> tmp_cache = ignite.cache (cachename);
+				ArrayList<byte[]> tmp_byte = tmp_cache.get (String.valueOf (1));
+				buffer.addAll (tmp_byte);
+			}
+			if (filepath.charAt (filepath.length () - 1) != '/') {
+				ConcateByteArray (buffer, filepath.concat ("/") + filename);
+			} else {
+				ConcateByteArray (buffer, filepath + filename);
+			}
+			return true;
+		});
+		return ignite;
+	}
+	
+	public static Ignite startDefaultIgnite (String cachename) {
+		CacheConfiguration cacheCfg = new CacheConfiguration (cachename);
 		cacheCfg.setCacheMode (CacheMode.PARTITIONED);
 		
 		IgniteConfiguration cfg = new IgniteConfiguration ();
@@ -63,7 +142,7 @@ public class IgniteUtility {
 		
 		Transaction tx = transactions.txStart ();
 		
-		IgniteCache<String, ArrayList<byte[]>> cache = ignite.cache ("myCache");
+		IgniteCache<String, ArrayList<byte[]>> cache = ignite.cache (cachename);
 		
 		IgniteMessaging igniteMessaging = ignite.message (ignite.cluster ().forLocal());
 		//监听的消息是接受方而不是发送方，监听的是接受这个动作而不是发送这个东作，所以其实这里填写local就可以了
@@ -79,11 +158,11 @@ public class IgniteUtility {
 			long start = Long.valueOf (tmp[1]);
 			long end = Long.valueOf (tmp[2]);
 			String seriesID = tmp[3];
-			SiteFileFetch siteFileFetch = new SiteFileFetch (url, "/Users/Luodian/Desktop/", nodeID + "_" + seriesID, start, end, 5);
+			SiteFileFetch siteFileFetch = new SiteFileFetch (url, "./Downloads/", nodeID + "_" + seriesID, start, end, 5);
 			siteFileFetch.start ();
 			try {
 				siteFileFetch.join ();
-				File file = new File ("/Users/Luodian/Desktop/" + nodeID + "_" + seriesID);
+				File file = new File ("./Downloads/" + nodeID + "_" + seriesID);
 				ArrayList<byte[]> tmpArrays = new ArrayList<byte[]> ();
 				try (FileInputStream fileInputStream = new FileInputStream (file);
 				     BufferedInputStream bufferedInputStream = new BufferedInputStream (fileInputStream)
@@ -99,8 +178,6 @@ public class IgniteUtility {
 					IgniteMessaging messaging = ignite.message (ignite.cluster ().forNodeId (nodeID));
 					messaging.send (seriesID, "SUCCESS");
 					System.out.println ("Send Message!");
-				} catch (FileNotFoundException e) {
-					e.printStackTrace ();
 				} catch (IOException e) {
 					e.printStackTrace ();
 				}
@@ -111,20 +188,5 @@ public class IgniteUtility {
 			return true;
 		});
 		return ignite;
-	}
-	
-	public static void ConcateByteArray (ArrayList<byte[]> multi_file, String filename) {
-		try {
-			DataOutputStream dout = new DataOutputStream (new FileOutputStream (filename));
-			
-			System.out.println (filename);
-			
-			for (byte[] aMulti_file : multi_file) {
-				dout.write (aMulti_file);
-			}
-			dout.close ();
-		} catch (IOException e) {
-			e.printStackTrace ();
-		}
 	}
 }

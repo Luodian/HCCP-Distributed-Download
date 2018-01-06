@@ -1,5 +1,6 @@
 package com.Utility.DownloadUtility;
-import java.io.*;
+
+import java.io.File;
 
 public class SiteFileFetch extends Thread {
     private String siteURL; //网站URL
