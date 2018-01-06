@@ -11,6 +11,7 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.transactions.Transaction;
 
 import java.io.*;
+import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.UUID;
@@ -100,27 +101,28 @@ public class IgniteUtility {
         ArrayListSerializaion<byte[]> buffer = new ArrayListSerializaion<byte[]> ();
 		
 		IgniteMessaging igniteMessaging = ignite.message (ignite.cluster ().forLocal ());
-		
-		igniteMessaging.localListen (String.valueOf (1), (nodeID, msg) ->
-		{
-			Transaction tx = ignite.transactions ().txStart ();
-			System.out.println (msg);
+		for (int i = 1; i<= node_ids.size();i++) {
+            igniteMessaging.localListen(String.valueOf(1), (nodeID, msg) ->
+            {
+                Transaction tx = ignite.transactions().txStart();
+                System.out.println(msg);
 //				System.out.println ("LLLLLLLLLLl");
-			if (msg.equals ("SUCCESS")) {
+                if (msg.equals("SUCCESS")) {
 //					System.out.println ("LLLLLLLLLLl");
-				IgniteCache<String, ArrayListSerializaion<byte[]>> tmp_cache = ignite.cache (cachename);
-				tx.commit ();
-				ArrayListSerializaion<byte[]> tmp_byte = tmp_cache.get (String.valueOf (1));
+                    IgniteCache<String, ArrayListSerializaion<byte[]>> tmp_cache = ignite.cache(cachename);
+                    tx.commit();
+                    ArrayListSerializaion<byte[]> tmp_byte = tmp_cache.get(String.valueOf(1));
 
-				buffer.addAll (tmp_byte);
-			}
-			if (filepath.charAt (filepath.length () - 1) != '/') {
-				ConcateByteArray (buffer, filepath.concat ("/") + filename);
-			} else {
-				ConcateByteArray (buffer, filepath + filename);
-			}
-			return true;
-		});
+                    buffer.addAll(tmp_byte);
+                }
+                if (filepath.charAt(filepath.length() - 1) != '/') {
+                    ConcateByteArray(buffer, filepath.concat("/") + filename);
+                } else {
+                    ConcateByteArray(buffer, filepath + filename);
+                }
+                return true;
+            });
+        }
 		return ignite;
 	}
 	
@@ -165,12 +167,31 @@ public class IgniteUtility {
 				try (FileInputStream fileInputStream = new FileInputStream (file);
 				     BufferedInputStream bufferedInputStream = new BufferedInputStream (fileInputStream)
 				) {
-					byte[] bytes = new byte[1024 * 1024];
-					int is_end = bufferedInputStream.read (bytes);
-					while (is_end != -1) {
+					byte[] bytes;
+                    byte[] temp = new byte[1024*1024];
+                    int is_end = bufferedInputStream.read (temp);
+                    System.out.println(is_end);
+                    if ( is_end < 1024*1024 ) {
+                        bytes = new byte[is_end];
+                        System.arraycopy(temp, 0, bytes, 0, is_end);
+                    }
+                    else {
+                        bytes = temp;
+                    }
+                    while (true) {
 						tmpArrays.add(bytes);
-						bytes = new byte[1024 * 1024];
-						is_end = bufferedInputStream.read(bytes);
+                        temp = new byte[1024*1024];
+                        is_end = bufferedInputStream.read (temp);
+
+                        if (is_end == -1)
+                            break;
+                        else if ( is_end < 1024*1024 ) {
+                            bytes = new byte[is_end];
+                            System.arraycopy(temp, 0, bytes, 0, is_end);
+                        }
+                        else {
+                            bytes = temp;
+                        }
 					}
 					cache.put(seriesID, tmpArrays);
 					tx.commit ();

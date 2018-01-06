@@ -41,7 +41,7 @@ public class SiteFileFetch extends Thread {
                 for (int i = 0; i < endPos.length - 1; i++) {
                     endPos[i] = startPos[i + 1];
                 }
-                endPos[endPos.length - 1] = endPosition - startPosition;
+                endPos[endPos.length - 1] = endPosition;
             }
 
             // 启动子线程
@@ -49,6 +49,7 @@ public class SiteFileFetch extends Thread {
             for (int i = 0; i < startPos.length; i++) {
                 fileSplitterFetch[i] = new FileSplitterFetch(siteURL, filePath + File.separator + fileName,
                         startPos[i], endPos[i], startPosition , i);
+                if (i == 4) System.out.println("??");
                 fileSplitterFetch[i].start();
             }
 

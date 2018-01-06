@@ -21,6 +21,7 @@ public class FileSplitterFetch extends Thread {
     }
 
     public void run() {
+        System.out.println(this.startPos+ ":" + this.endPos);
         while (this.startPos < this.endPos) {
             try {
                 URL url = new URL(this.sourceURL);

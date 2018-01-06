@@ -1,5 +1,6 @@
 package com.company;
 
+import com.Utility.DownloadUtility.SiteFileFetch;
 import org.apache.ignite.Ignite;
 
 import java.io.Serializable;
