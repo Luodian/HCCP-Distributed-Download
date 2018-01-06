@@ -32,19 +32,15 @@ public class SiteFileFetch extends Thread {
         // 启动 FileSplitterFetch 线程
         // 等待子线程返回
         try {
-            fileLength = endPosition - startPosition;
-            if (fileLength == -1) {
-                Utility.log("File Length is not known!");
-            } else if (fileLength == -2) {
-                Utility.log("File is not access!");
-            } else {
-                for (int i = 0; i < startPos.length; i++) {
-                    startPos[i] = (i * (fileLength / startPos.length)) + startPosition;
-                }
+            startPos = Utility.fileSplit(startPosition, endPosition, splitter);
+            if (startPos==null){
+                Utility.log("File invalided!");
+            }
+            else {
                 for (int i = 0; i < endPos.length - 1; i++) {
                     endPos[i] = startPos[i + 1];
                 }
-                endPos[endPos.length - 1] = fileLength;
+                endPos[endPos.length - 1] = endPosition - startPosition;
             }
 
             // 启动子线程
