@@ -14,6 +14,7 @@ import java.io.*;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.UUID;
+import java.util.Vector;
 
 import static com.Utility.DownloadUtility.FileInfo.getFileSize;
 
@@ -95,8 +96,8 @@ public class IgniteUtility {
 //		String url = "https://ws1.sinaimg.cn/large/006tNc79ly1fn4o49dqcaj30sg0sgmzo.jpg";
 		
 		multicast (ignite, node_ids, url, 1);
-		
-		ArrayList<byte[]> buffer = new ArrayList<> ();
+
+        ArrayListSerializaion<byte[]> buffer = new ArrayListSerializaion<byte[]> ();
 		
 		IgniteMessaging igniteMessaging = ignite.message (ignite.cluster ().forLocal ());
 		
@@ -107,11 +108,11 @@ public class IgniteUtility {
 //				System.out.println ("LLLLLLLLLLl");
 			if (msg.equals ("SUCCESS")) {
 //					System.out.println ("LLLLLLLLLLl");
-				IgniteCache<String, ArrayListSerializaion> tmp_cache = ignite.cache (cachename);
+				IgniteCache<String, ArrayListSerializaion<byte[]>> tmp_cache = ignite.cache (cachename);
 				tx.commit ();
-				ArrayListSerializaion tmp_byte = tmp_cache.get (String.valueOf (1));
+				ArrayListSerializaion<byte[]> tmp_byte = tmp_cache.get (String.valueOf (1));
 
-				buffer.addAll (tmp_byte.bytes);
+				buffer.addAll (tmp_byte);
 			}
 			if (filepath.charAt (filepath.length () - 1) != '/') {
 				ConcateByteArray (buffer, filepath.concat ("/") + filename);
@@ -157,11 +158,10 @@ public class IgniteUtility {
 
 				Transaction tx = transactions.txStart ();
 
-				IgniteCache<String, ArrayListSerializaion> cache = ignite.cache (cachename);
+				IgniteCache<String, ArrayListSerializaion<byte[]>> cache = ignite.cache (cachename);
 
 				File file = new File ("./Downloads/" + nodeID + "_" + seriesID);
-				ArrayListSerializaion as = new ArrayListSerializaion();
-				ArrayList<byte[]> tmpArrays = new ArrayList<byte[]> ();
+                ArrayListSerializaion<byte[]> tmpArrays = new ArrayListSerializaion<byte[]>();
 				try (FileInputStream fileInputStream = new FileInputStream (file);
 				     BufferedInputStream bufferedInputStream = new BufferedInputStream (fileInputStream)
 				) {
@@ -172,8 +172,7 @@ public class IgniteUtility {
 						bytes = new byte[1024 * 1024];
 						is_end = bufferedInputStream.read(bytes);
 					}
-					as.bytes = tmpArrays;
-					cache.put(seriesID, as);
+					cache.put(seriesID, tmpArrays);
 					tx.commit ();
 					IgniteMessaging messaging = ignite.message (ignite.cluster ().forNodeId (nodeID));
 					messaging.send (seriesID, "SUCCESS");
