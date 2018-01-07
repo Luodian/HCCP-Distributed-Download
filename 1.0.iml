@@ -16,6 +16,8 @@
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="library" name="fastutil-8.1.1" level="project" />
+    <orderEntry type="library" name="fastutil-8.1.11" level="project" />
     <orderEntry type="library" name="Maven: org.apache.ignite:ignite-core:2.3.1" level="project" />
     <orderEntry type="library" name="Maven: javax.cache:cache-api:1.0.0" level="project" />
     <orderEntry type="library" name="Maven: org.jetbrains:annotations:13.0" level="project" />
@@ -37,5 +39,12 @@
     <orderEntry type="library" name="Maven: org.apache.lucene:lucene-queries:5.5.2" level="project" />
     <orderEntry type="library" name="Maven: org.apache.lucene:lucene-sandbox:5.5.2" level="project" />
     <orderEntry type="library" name="Maven: com.h2database:h2:1.4.195" level="project" />
+    <orderEntry type="library" name="Maven: org.apache.ignite:ignite-ml:2.3.1" level="project" />
+    <orderEntry type="library" name="Maven: it.unimi.dsi:fastutil:7.0.12" level="project" />
+    <orderEntry type="library" name="Maven: com.github.fommil.netlib:core:1.1.2" level="project" />
+    <orderEntry type="library" name="Maven: net.sourceforge.f2j:arpack_combined_all:0.1" level="project" />
+    <orderEntry type="library" name="Maven: org.apache.commons:commons-rng-core:1.0" level="project" />
+    <orderEntry type="library" name="Maven: org.apache.commons:commons-rng-client-api:1.0" level="project" />
+    <orderEntry type="library" name="Maven: org.apache.commons:commons-rng-simple:1.0" level="project" />
   </component>
 </module>
